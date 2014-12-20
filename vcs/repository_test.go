@@ -1373,25 +1373,17 @@ func makeHgRepositoryNative(t testing.TB, cmds ...string) *hg.Repository {
 }
 
 func directoryContains(dir string, dirs []string, files []string) bool {
-	for _, file := range files {
-		_, err := os.Open(path.Join(dir, file))
-		if err != nil {
+	for _, f := range files {
+		fi, err := os.Stat(path.Join(dir, f))
+		if err != nil || fi.IsDir() {
 			return false
 		}
 	}
-	for _, name := range dirs {
-		f, err := os.Open(path.Join(dir, name))
-		if err != nil {
+	for _, d := range dirs {
+		fi, err := os.Stat(path.Join(dir, d))
+		if err != nil || !fi.IsDir() {
 			return false
 		}
-		fi, err := f.Stat()
-		if err != nil {
-			return false
-		}
-		if !fi.IsDir() {
-			return false
-		}
-
 	}
 	return true
 }
