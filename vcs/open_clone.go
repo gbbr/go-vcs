@@ -2,6 +2,24 @@ package vcs
 
 import "fmt"
 
+type initFn func(dir string, isBare bool) (Repository, error)
+
+var initers = map[string]initFn{}
+
+func RegisterIniter(vcs string, f initFn) {
+	panicParamsMissing(vcs, f)
+	initers[vcs] = f
+}
+
+// Init initializes a Repository at the given directory.
+func Init(vcs, dir string, isBare bool) (Repository, error) {
+	init, ok := initers[vcs]
+	if !ok {
+		return nil, &UnsupportedVCSError{vcs, "Init"}
+	}
+	return init(dir, isBare)
+}
+
 // An Opener is a function that opens a repository rooted at dir in
 // the filesystem.
 type Opener func(dir string) (Repository, error)
@@ -27,12 +45,7 @@ var openers = map[string]Opener{}
 // If an opener for the VCS is already registered, RegisterOpener
 // overwrites it with f. If vcs is empty or f is nil, it also panics.
 func RegisterOpener(vcs string, f Opener) {
-	if vcs == "" {
-		panic("empty VCS type")
-	}
-	if f == nil {
-		panic("Opener func for '" + vcs + "' is nil")
-	}
+	panicParamsMissing(vcs, f)
 	openers[vcs] = f
 }
 
@@ -72,13 +85,17 @@ var cloners = map[string]Cloner{}
 // If a cloner for the VCS is already registered, RegisterCloner
 // overwrites it with f. If vcs is empty or f is nil, it also panics.
 func RegisterCloner(vcs string, f Cloner) {
+	panicParamsMissing(vcs, f)
+	cloners[vcs] = f
+}
+
+func panicParamsMissing(vcs string, t interface{}) {
 	if vcs == "" {
 		panic("empty VCS type")
 	}
-	if f == nil {
+	if t == nil {
 		panic("Cloner func for '" + vcs + "' is nil")
 	}
-	cloners[vcs] = f
 }
 
 // CloneOpt configures a clone operation.

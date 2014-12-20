@@ -25,6 +25,7 @@ func init() {
 	vcs.RegisterOpener("git", func(dir string) (vcs.Repository, error) {
 		return Open(dir)
 	})
+	vcs.RegisterIniter("git", Init)
 }
 
 type Repository struct {
@@ -32,6 +33,19 @@ type Repository struct {
 	u *git2go.Repository
 
 	editLock sync.RWMutex // protects ops that change repository data
+}
+
+// Init initializes a new Git repository in the specified directory.
+func Init(dir string, isBare bool) (vcs.Repository, error) {
+	u, err := git2go.InitRepository(dir, isBare)
+	if err != nil {
+		return nil, err
+	}
+	cr, err := gitcmd.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	return &Repository{Repository: cr, u: u}, nil
 }
 
 func Open(dir string) (*Repository, error) {

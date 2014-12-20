@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"reflect"
 	"strings"
 	"testing"
@@ -1262,6 +1263,36 @@ func TestRepository_UpdateEverything(t *testing.T) {
 	}
 }
 
+func TestGitInit(t *testing.T) {
+	dir := path.Join(os.TempDir(), "go-vcs-tests/git-init-test")
+	os.Remove(dir)
+	_, err := git.Init(dir, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !directoryContains(dir,
+		[]string{".git", ".git/refs", ".git/info"},
+		[]string{".git/config"},
+	) {
+		t.Errorf("bad contents inside %s", dir)
+	}
+}
+
+func TestGitInitBare(t *testing.T) {
+	dir := path.Join(os.TempDir(), "go-vcs-tests/git-initbare-test")
+	os.Remove(dir)
+	_, err := git.Init(dir, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !directoryContains(dir,
+		[]string{"refs/heads", "info", "objects"},
+		[]string{"HEAD", "config"},
+	) {
+		t.Errorf("bad contents inside %s", dir)
+	}
+}
+
 // initGitRepository initializes a new Git repository and runs cmds in a new
 // temporary directory (returned as dir).
 func initGitRepository(t testing.TB, cmds ...string) (dir string) {
@@ -1341,6 +1372,29 @@ func makeHgRepositoryNative(t testing.TB, cmds ...string) *hg.Repository {
 	return r
 }
 
+func directoryContains(dir string, dirs []string, files []string) bool {
+	for _, file := range files {
+		_, err := os.Open(path.Join(dir, file))
+		if err != nil {
+			return false
+		}
+	}
+	for _, name := range dirs {
+		f, err := os.Open(path.Join(dir, name))
+		if err != nil {
+			return false
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return false
+		}
+		if !fi.IsDir() {
+			return false
+		}
+
+	}
+	return true
+}
 func commitsEqual(a, b *vcs.Commit) bool {
 	if (a == nil) != (b == nil) {
 		return false
